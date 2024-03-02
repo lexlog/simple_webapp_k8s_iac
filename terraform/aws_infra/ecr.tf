@@ -1,5 +1,5 @@
-resource "aws_ecr_repository" "mytomorrows-test-repo-dev" {
-  name                 = "mytomorrows-test-repo-dev" 
+resource "aws_ecr_repository" "simplewebapp-test-repo-dev" {
+  name                 = "simplewebapp-test-repo-dev" 
   image_tag_mutability = "MUTABLE"         
   image_scanning_configuration {
     scan_on_push = true                     
@@ -7,12 +7,12 @@ resource "aws_ecr_repository" "mytomorrows-test-repo-dev" {
 
   tags = {
     Environment = "Dev"
-    Project     = "mytomorrows"
+    Project     = "simplewebapp"
   }
 }
 
-resource "aws_ecr_repository" "mytomorrows-test-repo-prod" {
-  name                 = "mytomorrows-test-repo-prod" 
+resource "aws_ecr_repository" "simplewebapp-test-repo-prod" {
+  name                 = "simplewebapp-test-repo-prod" 
   image_tag_mutability = "IMMUTABLE"         
   image_scanning_configuration {
     scan_on_push = true                     
@@ -20,6 +20,6 @@ resource "aws_ecr_repository" "mytomorrows-test-repo-prod" {
 
   tags = {
     Environment = "Prod"
-    Project     = "mytomorrows"
+    Project     = "simplewebapp"
   }
 }

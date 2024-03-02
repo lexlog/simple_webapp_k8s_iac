@@ -1,0 +1,12 @@
+# Example Terraform variables for staging environment
+# Copy this file to terraform.tfvars and fill in your values
+
+# Docker image configuration
+image_tag        = "latest"
+image_repository = "your-ecr-repo-url/simplewebapp"
+
+# Cluster configuration
+cluster_name = "simple-eks-cluster"
+aws_region   = "eu-west-1"
+
+# Note: Helm values are configured in values-staging.yaml

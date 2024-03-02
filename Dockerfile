@@ -1,19 +1,32 @@
-FROM python:3.11.3-slim
+FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     FLASK_APP=app.py \
-    FLASK_RUN_PORT=5000
+    FLASK_RUN_PORT=5000 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
 WORKDIR /app
 
-COPY app/ .
+# Create non-root user first
+RUN useradd -m -u 1000 pythonuser && \
+    chown -R pythonuser:pythonuser /app
 
-RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt
+# Copy requirements first for better layer caching
+COPY --chown=pythonuser:pythonuser app/requirements.txt .
 
-RUN useradd -m pythonuser
+# Install dependencies as root, then switch to user
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY --chown=pythonuser:pythonuser app/ .
+
+# Switch to non-root user
 USER pythonuser
 
 EXPOSE 5000
 
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
+# Use gunicorn with production settings
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--threads", "2", "--timeout", "30", "app:app"]

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: simplewebapp-flask
+description: A Helm chart for simplewebapp Flask app
+type: application
+version: 1.0.0
+appVersion: "1.0"

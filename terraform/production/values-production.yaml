@@ -1,40 +1,32 @@
 namespace: production
 
+deployment:
+  replicas: 2
+
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  cpuTargetUtilization: 80
+
+container:
+  image: your-registry/simplewebapp
+
 resources:
   limits:
-    cpu: 100m
-    memory: 128Mi
+    cpu: 200m
+    memory: 256Mi
   requests:
     cpu: 100m
     memory: 128Mi
 
 configMap:
   data:
-    API_BASE_URL: "https://api.mytomorrows.com"
+    API_BASE_URL: "https://api.simplewebapp.com"
+    LOG_LEVEL: "INFO"
     MAX_CONNECTIONS: "300"
 
 secrets:
   data:
-    SECRET_KEY: c2VjcmV0X3ZhsHVl
-    DB_PASSWORD: cGFzc3vvcmQ=
-
-# other available vars
-
-# app:
-#   name: mytomorrows-flask
-#   port: 5000
-# container:
-#   name: flask-container
-#   image: lexloginov/mytomorrows
-# probes:
-#   liveness:
-#     path: /health-check
-#     periodSeconds: 30
-# service:
-#   port: 80
-# deployment:
-#   replicas: 1
-# hpa:
-#   minReplicas: 1
-#   maxReplicas: 3
-#   cpuTargetUtilization: 95
+    SECRET_KEY: "CHANGE_ME_BASE64_ENCODED"
+    DB_PASSWORD: "CHANGE_ME_BASE64_ENCODED"

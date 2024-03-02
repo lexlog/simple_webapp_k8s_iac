@@ -1,0 +1,12 @@
+# Example Terraform variables for production environment
+# Copy this file to terraform.tfvars and fill in your values
+
+# Docker image configuration
+image_tag        = "1.0.0"
+image_repository = "your-ecr-repo-url/simplewebapp"
+
+# Cluster configuration
+cluster_name = "simple-eks-cluster"
+aws_region   = "eu-west-1"
+
+# Note: Helm values are configured in values-production.yaml

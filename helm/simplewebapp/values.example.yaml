@@ -1,0 +1,60 @@
+app:
+  name: simplewebapp-flask
+  port: 5000
+
+namespace: default
+
+deployment:
+  replicas: 2
+
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  cpuTargetUtilization: 80
+
+container:
+  name: flask-container
+  # Replace with your Docker image repository
+  image: your-registry/simplewebapp
+  image_tag: "1.0.0"
+
+probes:
+  liveness:
+    path: /health
+    periodSeconds: 30
+    initialDelaySeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readiness:
+    path: /ready
+    periodSeconds: 10
+    initialDelaySeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+service:
+  port: 80
+  type: LoadBalancer
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+configMap:
+  data:
+    API_BASE_URL: "https://api.example.com"
+    LOG_LEVEL: "INFO"
+    MAX_CONNECTIONS: "10"
+
+secrets:
+  # IMPORTANT: Replace these with your actual base64-encoded secrets
+  # To encode a secret: echo -n 'your-secret-value' | base64
+  # Example: echo -n 'my-secret-key' | base64
+  data:
+    SECRET_KEY: "CHANGE_ME_BASE64_ENCODED"
+    DB_PASSWORD: "CHANGE_ME_BASE64_ENCODED"

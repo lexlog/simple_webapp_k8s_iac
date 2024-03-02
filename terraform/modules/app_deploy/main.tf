@@ -4,7 +4,7 @@ variable "namespace" {
 }
 
 variable "helm_values_override_file" {
-  description = "Optional override for Helm values"
+  description = "Path to Helm values override file"
   type        = string
 }
 
@@ -13,15 +13,20 @@ variable "image_tag" {
   type        = string
 }
 
-resource "helm_release" "mytomorrows-flask" {
+variable "image_repository" {
+  description = "Docker image repository (optional, can be set in values file)"
+  type        = string
+  default     = null
+}
 
-  name       = "mytomorrows-flask"
-  repository  = "../../helm"
-  chart      = "mytomorrows-flask"
+resource "helm_release" "simplewebapp-flask" {
+  name  = "simplewebapp-flask"
+  chart = "${path.root}/../../helm/simplewebapp"
 
-  namespace  = var.namespace
+  namespace        = var.namespace
   create_namespace = true
   wait             = true
+  timeout          = 600
 
   values = [
     file(var.helm_values_override_file)
@@ -30,5 +35,13 @@ resource "helm_release" "mytomorrows-flask" {
   set {
     name  = "container.image_tag"
     value = var.image_tag
+  }
+
+  dynamic "set" {
+    for_each = var.image_repository != null ? [1] : []
+    content {
+      name  = "container.image"
+      value = var.image_repository
+    }
   }
 }

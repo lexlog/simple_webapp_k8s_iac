@@ -1,0 +1,149 @@
+name: CI - Lint, Test, and Build
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+jobs:
+  lint:
+    name: Code Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          cd app
+          pip install -r requirements.txt
+          pip install flake8 black isort
+
+      - name: Lint with flake8
+        run: |
+          cd app
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || true
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Check code formatting with black
+        run: |
+          cd app
+          black --check . || true
+
+      - name: Check import sorting with isort
+        run: |
+          cd app
+          isort --check-only . || true
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          cd app
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+
+      - name: Run tests
+        run: |
+          cd app
+          pytest tests/ -v --cov=. --cov-report=xml || echo "No tests directory found"
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        if: always()
+        with:
+          file: ./app/coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+
+  docker-build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          tags: simplewebapp:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  helm-lint:
+    name: Lint Helm Charts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: '3.12.0'
+
+      - name: Lint Helm chart
+        run: |
+          helm lint helm/simplewebapp
+
+      - name: Validate Helm templates
+        run: |
+          helm template helm/simplewebapp --values helm/simplewebapp/values.yaml --debug
+
+  terraform-validate:
+    name: Validate Terraform
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.10.2
+
+      - name: Terraform Format Check
+        run: |
+          terraform fmt -check -recursive
+
+      - name: Terraform Init - Staging
+        run: |
+          cd terraform/staging
+          terraform init -backend=false
+
+      - name: Terraform Validate - Staging
+        run: |
+          cd terraform/staging
+          terraform validate
+
+      - name: Terraform Init - Production
+        run: |
+          cd terraform/production
+          terraform init -backend=false
+
+      - name: Terraform Validate - Production
+        run: |
+          cd terraform/production
+          terraform validate

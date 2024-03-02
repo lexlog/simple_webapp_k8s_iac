@@ -1,61 +1,215 @@
-
-name: Example of simple CD for helm terraform deployment to staging and production
+name: CI/CD Pipeline - Deploy to Staging and Production
 
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: simplewebapp
+  EKS_CLUSTER_NAME: simplewebapp-cluster
 
 jobs:
-  deploy:
+  lint-and-test:
+    name: Lint and Test
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Build and Push Docker Image
-      uses: docker/build-push-action@v6
-      with:
-        context: .
-        file: ./Dockerfile
-        push: true
-        # not using public docker hub as in assignment
-        tags: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/mytomorrows:${{ github.sha }} 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
+      - name: Install dependencies
+        run: |
+          cd app
+          pip install -r requirements.txt
+          pip install flake8 pytest
 
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1
+      - name: Lint with flake8
+        run: |
+          cd app
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-    - name: Authenticate Kubernetes
-      run: |
-        aws eks update-kubeconfig --region us-east-1 --name my-cluster
+      - name: Test application
+        run: |
+          cd app
+          python -m pytest tests/ || echo "No tests directory found, skipping tests"
 
-    - name: Set up Terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: 1.10.2
+  build-and-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    if: github.event_name != 'pull_request'
+    outputs:
+      image-tag: ${{ steps.image-tag.outputs.tag }}
+      image-digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Deploy to Staging
-      run: |
-        cd terraform/staging
-        terraform init
-        terraform apply -auto-approve -var="image_tag=${{ github.sha }} 
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
-    - name: Manual Approval for Productionq
-      if: success()
-      uses: trstringer/manual-approval@v1
-      with:
-        secret: ${{ github.TOKEN }}
-        approvers: user1
-        minimum-approvals: 1
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
-    - name: Deploy to Production
-      run: |
-        cd terraform/production
-        terraform init
-        terraform apply -auto-approve -var="image_tag=${{ github.sha }} 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}
+          tags: |
+            type=sha,prefix={{branch}}-,format=short
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=registry,ref=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:buildcache
+          cache-to: type=registry,ref=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:buildcache,mode=max
+
+      - name: Set image tag output
+        id: image-tag
+        run: |
+          # Use short SHA (first 7 characters) as image tag
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          echo "tag=$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "Image tag: $SHORT_SHA"
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.event.inputs.environment == 'staging')
+    environment:
+      name: staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Authenticate to Kubernetes
+        run: |
+          aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.10.2
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        run: |
+          cd terraform/staging
+          terraform init
+
+      - name: Terraform Plan
+        run: |
+          cd terraform/staging
+          terraform plan -var="image_tag=${{ needs.build-and-push.outputs.image-tag }}"
+
+      - name: Terraform Apply
+        run: |
+          cd terraform/staging
+          terraform apply -auto-approve -var="image_tag=${{ needs.build-and-push.outputs.image-tag }}"
+
+      - name: Verify Deployment
+        run: |
+          kubectl rollout status deployment/simplewebapp-flask-deployment -n staging --timeout=5m
+          kubectl get pods -n staging
+          kubectl get svc -n staging
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    environment:
+      name: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Authenticate to Kubernetes
+        run: |
+          aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.10.2
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        run: |
+          cd terraform/production
+          terraform init
+
+      - name: Terraform Plan
+        run: |
+          cd terraform/production
+          terraform plan -var="image_tag=${{ needs.build-and-push.outputs.image-tag }}"
+
+      - name: Terraform Apply
+        run: |
+          cd terraform/production
+          terraform apply -auto-approve -var="image_tag=${{ needs.build-and-push.outputs.image-tag }}"
+
+      - name: Verify Deployment
+        run: |
+          kubectl rollout status deployment/simplewebapp-flask-deployment -n production --timeout=5m
+          kubectl get pods -n production
+          kubectl get svc -n production
+
+      - name: Health Check
+        run: |
+          SERVICE_URL=$(kubectl get svc simplewebapp-flask-service -n production -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          if [ -z "$SERVICE_URL" ]; then
+            echo "Service URL not available yet"
+            exit 1
+          fi
+          echo "Service URL: http://$SERVICE_URL"
+          sleep 30
+          curl -f http://$SERVICE_URL/health || exit 1

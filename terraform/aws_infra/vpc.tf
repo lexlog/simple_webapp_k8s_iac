@@ -7,49 +7,55 @@ resource "aws_vpc" "eks_vpc" {
   }
 }
 
+data "aws_availability_zones" "available" {
+  state = "available"
+}
+
 resource "aws_subnet" "public_subnet_1" {
   vpc_id                  = aws_vpc.eks_vpc.id
   cidr_block              = "10.0.4.0/24"
-  availability_zone       = "eu-west-1a"
+  availability_zone       = data.aws_availability_zones.available.names[0]
   map_public_ip_on_launch = true
   tags = {
     Name = "eks-public-subnet-1"
-    "kubernetes.io/role/elb" = 1
+    "kubernetes.io/role/elb" = "1"
+    "kubernetes.io/cluster/${var.cluster-name}" = "shared"
   }
 }
 
 resource "aws_subnet" "public_subnet_2" {
   vpc_id                  = aws_vpc.eks_vpc.id
   cidr_block              = "10.0.3.0/24"
-  availability_zone       = "eu-west-1b"
+  availability_zone       = data.aws_availability_zones.available.names[1]
   map_public_ip_on_launch = true
   tags = {
     Name = "eks-public-subnet-2"
-    "kubernetes.io/role/elb" = 1
+    "kubernetes.io/role/elb" = "1"
+    "kubernetes.io/cluster/${var.cluster-name}" = "shared"
   }
 }
 
 resource "aws_subnet" "private_subnet_1" {
   vpc_id                  = aws_vpc.eks_vpc.id
   cidr_block              = "10.0.1.0/24"
-  availability_zone       = "eu-west-1a"
+  availability_zone       = data.aws_availability_zones.available.names[0]
   map_public_ip_on_launch = false
   tags = {
     Name = "eks-private-subnet-1"
     "kubernetes.io/cluster/${var.cluster-name}" = "shared"
-    "kubernetes.io/role/internal-elb" = 1
+    "kubernetes.io/role/internal-elb" = "1"
   }
 }
 
 resource "aws_subnet" "private_subnet_2" {
   vpc_id                  = aws_vpc.eks_vpc.id
   cidr_block              = "10.0.2.0/24"
-  availability_zone       = "eu-west-1b"
+  availability_zone       = data.aws_availability_zones.available.names[1]
   map_public_ip_on_launch = false
   tags = {
     Name = "eks-private-subnet-2"
     "kubernetes.io/cluster/${var.cluster-name}" = "shared"
-    "kubernetes.io/role/internal-elb" = 1
+    "kubernetes.io/role/internal-elb" = "1"
   }
 }
 

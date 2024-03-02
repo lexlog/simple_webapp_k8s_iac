@@ -1,15 +1,34 @@
+variable "aws_region" {
+  description = "AWS region for resources"
+  default     = "eu-west-1"
+  type        = string
+}
+
 provider "aws" {
-  region = "eu-west-1"
+  region = var.aws_region
+}
+
+data "aws_eks_cluster" "cluster" {
+  name = var.cluster-name
+  depends_on = [aws_eks_cluster.eks_cluster]
+}
+
+data "aws_eks_cluster_auth" "cluster" {
+  name = var.cluster-name
+  depends_on = [aws_eks_cluster.eks_cluster]
 }
 
 provider "kubernetes" {
-  config_path    = "~/.kube/config"
-  config_context = "arn:aws:eks:eu-west-1:294308689404:cluster/simple-eks-cluster"
+  host                   = data.aws_eks_cluster.cluster.endpoint
+  cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority[0].data)
+  token                  = data.aws_eks_cluster_auth.cluster.token
 }
 
 provider "helm" {
   kubernetes {
-    config_path = "~/.kube/config"
+    host                   = data.aws_eks_cluster.cluster.endpoint
+    cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority[0].data)
+    token                  = data.aws_eks_cluster_auth.cluster.token
   }
 }
 
@@ -28,6 +47,10 @@ terraform {
     helm = {
       source  = "hashicorp/helm"
       version = ">= 2.16.1"
+    }
+    tls = {
+      source  = "hashicorp/tls"
+      version = ">= 4.0"
     }
   }
 }

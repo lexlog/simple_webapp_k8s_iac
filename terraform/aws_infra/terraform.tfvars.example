@@ -1,0 +1,9 @@
+# Example Terraform variables for AWS infrastructure
+# Copy this file to terraform.tfvars and fill in your values
+
+# Cluster configuration
+cluster-name = "simple-eks-cluster"
+aws_region   = "eu-west-1"
+
+# Optional: Override default values
+# vpc_cidr = "10.0.0.0/16"
