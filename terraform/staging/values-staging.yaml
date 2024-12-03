@@ -1,0 +1,15 @@
+namespace: staging
+
+container:
+  image: lexloginov/mytomorrows
+  image_tag: 1.0.0-rc
+
+configMap:
+  data:
+    API_BASE_URL: "https://staging.mytomorrows.com"
+    LOG_LEVEL: "DEBUG"
+
+secrets:
+  data:
+    SECRET_KEY: c2VjcmV0X3ZhbHVl
+    DB_PASSWORD: cGFzc3dvcmQ=

@@ -1,0 +1,40 @@
+namespace: production
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+configMap:
+  data:
+    API_BASE_URL: "https://api.mytomorrows.com"
+    MAX_CONNECTIONS: "300"
+
+secrets:
+  data:
+    SECRET_KEY: c2VjcmV0X3ZhsHVl
+    DB_PASSWORD: cGFzc3vvcmQ=
+
+# other available vars
+
+# app:
+#   name: mytomorrows-flask
+#   port: 5000
+# container:
+#   name: flask-container
+#   image: lexloginov/mytomorrows
+# probes:
+#   liveness:
+#     path: /health-check
+#     periodSeconds: 30
+# service:
+#   port: 80
+# deployment:
+#   replicas: 1
+# hpa:
+#   minReplicas: 1
+#   maxReplicas: 3
+#   cpuTargetUtilization: 95

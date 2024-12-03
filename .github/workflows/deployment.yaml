@@ -1,0 +1,61 @@
+
+name: Example of simple CD for helm terraform deployment to staging and production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Build and Push Docker Image
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        # not using public docker hub as in assignment
+        tags: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/mytomorrows:${{ github.sha }} 
+
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Authenticate Kubernetes
+      run: |
+        aws eks update-kubeconfig --region us-east-1 --name my-cluster
+
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.10.2
+
+    - name: Deploy to Staging
+      run: |
+        cd terraform/staging
+        terraform init
+        terraform apply -auto-approve -var="image_tag=${{ github.sha }} 
+
+    - name: Manual Approval for Productionq
+      if: success()
+      uses: trstringer/manual-approval@v1
+      with:
+        secret: ${{ github.TOKEN }}
+        approvers: user1
+        minimum-approvals: 1
+
+    - name: Deploy to Production
+      run: |
+        cd terraform/production
+        terraform init
+        terraform apply -auto-approve -var="image_tag=${{ github.sha }} 

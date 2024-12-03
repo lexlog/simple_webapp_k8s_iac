@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "app.deploymentName" . }}
+  namespace: {{ .Values.namespace }}
+  labels: 
+    app: {{ .Values.app.name }}
+spec:
+  replicas: {{ .Values.deployment.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.app.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.app.name }}
+    spec:
+      containers:
+        - name: {{ .Values.container.name }}
+          image: {{ .Values.container.image }}:{{ .Values.container.image_tag }}
+          ports:
+            - containerPort: {{ .Values.app.port }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.liveness.path }}
+              port: {{ .Values.app.port }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+          resources:
+          {{- if .Values.resources }}
+            limits:
+              cpu: "{{ .Values.resources.limits.cpu }}"
+            requests:
+              cpu: "{{ .Values.resources.requests.cpu }}"
+          {{- end }}
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "app.secretName" . }}
+                  key: DB_PASSWORD
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "app.secretName" . }}
+                  key: SECRET_KEY
+            - name: API_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "app.configMapName" . }}
+                  key: API_BASE_URL
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "app.configMapName" . }}
+                  key: LOG_LEVEL
+            - name: MAX_CONNECTIONS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "app.configMapName" . }}
+                  key: MAX_CONNECTIONS

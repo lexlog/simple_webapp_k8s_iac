@@ -1,0 +1,6 @@
+apiVersion: v2
+name: mytomorrows-flask
+description: A Helm chart for mytomorrows Flask app
+type: application
+version: 1.0.0
+appVersion: "1.0"
