@@ -1,11 +1,21 @@
-# IaC example for simple flask app (docker, k8s(AWS EKS), helm, terrafrm)
+# Example of deploying a web app to an EKS cluster using Terraform and Helm
 
-This repository shows an deployment example of simplest dockerized web application into Kubernetes cluster, using terraform and AWS EKS.
+This repository shows the deployment example of trivial dockerized web application into Kubernetes cluster, using terraform and AWS EKS.
+
+Note - this prototype was done as a preparation for a task and had it's limitations in requirements, specifically:
+- app should be deployed to the cluster using terraform provider
+- deployments should support multiple environments in terraform
+- deployment should use helm charts
+- templating should be used where it is applicable
+- solution should be a POC, production ready enhancements can be described in text
 
 General description:
-- Code includes two terraform directories - `terraform/production` and `terraform/staging`. 
-- Each `main.tf` deploys common helm chart with different environent specific variables.
-- Cluster for the solution hosted in AWS (EKS)
+- app directory with simple Flask webapp, reading environment variables and returning them via REST API
+- Dockerfile for the Flask webapp, using WSGI server
+- terraform directory with infrastructure and deployment
+  -  `aws_infra` - IaC provisioning AWS infrastructure like network (VPC), authorization (IAM), cluster (EKS), image repositories (ECR)
+  -  `terraform/production` and `terraform/staging` -  an example of deployments on two different environments
+- helm - templated helm charts
 
 #### Provision Infra
 
