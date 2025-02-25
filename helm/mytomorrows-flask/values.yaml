@@ -1,5 +1,5 @@
 app:
-  name: mytomorrows-flask
+  name: simplewebapp-flask
   port: 5000
 
 namespace: staging
@@ -14,7 +14,7 @@ hpa:
 
 container:
   name: flask-container
-  image: lexloginov/mytomorrows
+  image: lexloginov/simplewebapp
   image_tag: "{{ .Values.container.image_tag }}"
 
 probes:

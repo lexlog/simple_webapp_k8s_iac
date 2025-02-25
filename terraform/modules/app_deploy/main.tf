@@ -13,11 +13,11 @@ variable "image_tag" {
   type        = string
 }
 
-resource "helm_release" "mytomorrows-flask" {
+resource "helm_release" "simplewebapp-flask" {
 
-  name       = "mytomorrows-flask"
+  name       = "simplewebapp-flask"
   repository  = "../../helm"
-  chart      = "mytomorrows-flask"
+  chart      = "simplewebapp-flask"
 
   namespace  = var.namespace
   create_namespace = true

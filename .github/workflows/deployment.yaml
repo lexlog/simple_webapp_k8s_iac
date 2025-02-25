@@ -21,7 +21,7 @@ jobs:
         file: ./Dockerfile
         push: true
         # not using public docker hub as in assignment
-        tags: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/mytomorrows:${{ github.sha }} 
+        tags: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/simplewebapp:${{ github.sha }} 
 
 
     - name: Configure AWS Credentials

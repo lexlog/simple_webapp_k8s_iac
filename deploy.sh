@@ -32,7 +32,7 @@ terraform plan
 
 terraform apply -var="image_tag=1.0.0-prod"
 
-SERVICE_IP="$(kubectl get svc mytomorrows-flask-service -n production -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
+SERVICE_IP="$(kubectl get svc simplewebapp-flask-service -n production -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
 
 if [[ -z "$SERVICE_IP" ]]; then
   echo "Failed to retrieve external IP. Please check the service status."

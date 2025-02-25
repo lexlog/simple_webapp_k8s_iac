@@ -1,2 +1,2 @@
 namespace   = "staging"
-values_file = "../../helm/mytomorrows-flask/values-staging.yaml"
+values_file = "../../helm/simplewebapp-flask/values-staging.yaml"

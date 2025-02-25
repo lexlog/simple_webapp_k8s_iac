@@ -1,2 +1,2 @@
 namespace   = "production"
-values_file = "../../helm/mytomorrows-flask/values-production.yaml"
+values_file = "../../helm/simplewebapp-flask/values-production.yaml"

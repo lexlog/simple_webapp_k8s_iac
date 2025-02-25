@@ -1,17 +1,13 @@
-## Description
-<!-- how the code works, how to deploy the application and how to verify its successful deployment. -->
+# IaC example for simple flask app (docker, k8s(AWS EKS), helm, terrafrm)
+
+This repository shows an deployment example of simplest dockerized web application into Kubernetes cluster, using terraform and AWS EKS.
+
+General description:
 - Code includes two terraform directories - `terraform/production` and `terraform/staging`. 
 - Each `main.tf` deploys common helm chart with different environent specific variables.
-- Cluster for the solution should be hosted in AWS (EKS)
-- Solution description is focused on cluster level objects, infrastructure level enhancements are described in the "Enhancements" paragraph
+- Cluster for the solution hosted in AWS (EKS)
 
-### How to deploy
-
-#### Option 1 - simple
-- There is a script `deploy.sh` in the root of repository. Execute it by `./deploy.sh` and it will deploy helm chart to the AWS cluster, which is set up for your local kubectl.
-- Verification of deployment is written in the script - it will get external IP of service and curl two endpoints: "/" and "/configs"
-
-#### Option 2 - manual
+#### Provision Infra
 
 Precondition
 - Set up kubectl locally to connect to AWS cluster
@@ -27,12 +23,12 @@ Precondition
 2. Get external IP and check endpoints
   - 
     ```bash
-    kubectl get svc mytomorrows-flask-service -n production -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+    kubectl get svc simplewebapp-flask-service -n production -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
     ```
   - Open endpoints from browser: http://<external_ip>/ http://<external_ip>/configs
 
 
-## Details
+## Solution description
 ### Scalability
 Scalability of the solution is based on:
 - Configurable IaC: helm values, helm helpers for dynamic variables, tf modules and tf vars

@@ -1,12 +1,12 @@
 namespace: staging
 
 container:
-  image: lexloginov/mytomorrows
+  image: lexloginov/simplewebapp
   image_tag: 1.0.0-rc
 
 configMap:
   data:
-    API_BASE_URL: "https://staging.mytomorrows.com"
+    API_BASE_URL: "https://staging.simplewebapp.com"
     LOG_LEVEL: "DEBUG"
 
 secrets:
